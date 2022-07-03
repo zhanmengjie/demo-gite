@@ -6,13 +6,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.my.demogite.common.R;
 import com.my.demogite.entity.Category;
 import com.my.demogite.entity.Dish;
+import com.my.demogite.entity.dto.DishDto;
 import com.my.demogite.service.DishFlavorService;
 import com.my.demogite.service.DishService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/dish")
+@Slf4j
 public class DishController {
 
     @Autowired
@@ -41,8 +44,14 @@ public class DishController {
      * 新建菜单
      */
     @PostMapping
-    public R<String> save(@RequestBody Dish dish){
-        dishService.save(dish);
-        return R.success("新增分类成功");
+    public R<String> save(@RequestBody DishDto dishDto){
+        log.info(dishDto.toString());
+        dishService.saveWithFlavor(dishDto);
+        return R.success("新增菜品成功");
+    }
+    @DeleteMapping
+    public R<String> delete(Long ids){
+        dishService.deleteWithFlavor(ids);
+        return R.success("删除成功!");
     }
 }
