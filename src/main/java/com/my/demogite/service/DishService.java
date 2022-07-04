@@ -7,5 +7,17 @@ import com.my.demogite.entity.dto.DishDto;
 public interface DishService extends IService<Dish> {
 
     void saveWithFlavor(DishDto dishDto);
-    void deleteWithFlavor(Long id);
+    void deleteWithFlavor(Long[] id);
+
+    /**
+     * 根据id 查询菜品口味信息
+     * @param id
+     * @return
+     */
+    DishDto getByIdWithFlavor(Long id);
+
+    public void updateWithFlavor(DishDto dishDto);
+
+
+    void updateStatus(Long[] ids,int status);
 }

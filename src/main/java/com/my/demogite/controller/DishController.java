@@ -7,11 +7,16 @@ import com.my.demogite.common.R;
 import com.my.demogite.entity.Category;
 import com.my.demogite.entity.Dish;
 import com.my.demogite.entity.dto.DishDto;
+import com.my.demogite.service.CategoryService;
 import com.my.demogite.service.DishFlavorService;
 import com.my.demogite.service.DishService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/dish")
@@ -22,36 +27,95 @@ public class DishController {
     private DishService dishService;
     @Autowired
     private DishFlavorService dishFlavorService;
+    @Autowired
+    private CategoryService categoryService;
+
     /**
      * 菜品信息分页功能
+     *
      * @param page
      * @param pageSize
      * @return
      */
     @GetMapping("/page")
-    public R<Page> page(int page, int pageSize,String name){
+    public R<Page> page(int page, int pageSize, String name) {
         //构造条件分页
-        Page<Dish> pageInfo = new Page<>(page,pageSize);
+        Page<Dish> pageInfo = new Page<>(page, pageSize);
+        Page<DishDto> page1 = new Page<>(page, pageSize);
+
         //构造条件构造器
         LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
         //添加排序条件
-        wrapper.like(StringUtils.isNotBlank(name),Dish::getName,name);
-        wrapper.orderByDesc(Dish::getCreateTime);
-        dishService.page(pageInfo,wrapper);
-        return R.success(pageInfo);
+        wrapper.like(StringUtils.isNotBlank(name), Dish::getName, name);
+        wrapper.orderByDesc(Dish::getUpdateTime);
+        dishService.page(pageInfo, wrapper);
+
+        /**
+         *  对象拷贝
+         */
+        BeanUtils.copyProperties(pageInfo, page1, "records");
+        List<Dish> records = pageInfo.getRecords();
+        //遍历records集合  item == records
+        List<DishDto> list = records.stream().map((item) -> {
+            DishDto dishDto = new DishDto();
+            //将item的数据，拷贝到给我们刚创建的dishDto对象
+            BeanUtils.copyProperties(item, dishDto);
+            //获取菜品分类的的id
+            Long categoryId = item.getCategoryId();
+            //根据菜品分类的id ，查询菜品分类的名称
+            Category category = categoryService.getById(categoryId);
+            if (category != null) {
+                //查询菜品分类的名称
+                String name1 = category.getName();
+                dishDto.setCategoryName(name1);
+            }
+
+            return dishDto;
+        }).collect(Collectors.toList());
+
+        page1.setRecords(list);
+        return R.success(page1);
     }
+
     /**
      * 新建菜单
      */
     @PostMapping
-    public R<String> save(@RequestBody DishDto dishDto){
+    public R<String> save(@RequestBody DishDto dishDto) {
         log.info(dishDto.toString());
         dishService.saveWithFlavor(dishDto);
         return R.success("新增菜品成功");
     }
+
     @DeleteMapping
-    public R<String> delete(Long ids){
+    public R<String> delete(Long[] ids) {
         dishService.deleteWithFlavor(ids);
         return R.success("删除成功!");
+    }
+
+    /**
+     * 修改菜品，首先要 根据id查询 菜品的信息，并显示出来
+     */
+    @GetMapping("/{id}")
+    public R<DishDto> updateAndSelect(@PathVariable Long id) {
+        DishDto flavor = dishService.getByIdWithFlavor(id);
+        return R.success(flavor);
+    }
+
+    /**
+     * 修改菜品
+     */
+    @PutMapping
+    public R<String> update(@RequestBody DishDto dishDto) {
+        log.info(dishDto.toString());
+        dishService.updateWithFlavor(dishDto);
+        return R.success("修改菜品成功");
+    }
+
+    @PostMapping("/status/{status}")
+    public R<String> updateStatus(@PathVariable int status,Long[] ids) {
+        log.info(ids.toString());
+        dishService.updateStatus(ids,status);
+        return R.success("菜品状态修改成功!!!");
     }
 }
