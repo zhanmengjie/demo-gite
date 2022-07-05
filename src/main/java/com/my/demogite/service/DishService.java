@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.my.demogite.entity.Dish;
 import com.my.demogite.entity.dto.DishDto;
 
+import java.util.List;
+
 public interface DishService extends IService<Dish> {
 
     void saveWithFlavor(DishDto dishDto);
-    void deleteWithFlavor(Long[] id);
+    void deleteWithFlavor(List<Long> id);
 
     /**
      * 根据id 查询菜品口味信息

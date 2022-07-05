@@ -87,8 +87,13 @@ public class DishController {
         return R.success("新增菜品成功");
     }
 
+    /**
+     * 批量删除  菜单
+     * @param ids
+     * @return
+     */
     @DeleteMapping
-    public R<String> delete(Long[] ids) {
+    public R<String> delete(@RequestParam List<Long> ids) {
         dishService.deleteWithFlavor(ids);
         return R.success("删除成功!");
     }
@@ -111,6 +116,13 @@ public class DishController {
         dishService.updateWithFlavor(dishDto);
         return R.success("修改菜品成功");
     }
+
+    /**
+     * 修改菜品  状态（起售，停售）
+     * @param status
+     * @param ids
+     * @return
+     */
 
     @PostMapping("/status/{status}")
     public R<String> updateStatus(@PathVariable int status,Long[] ids) {

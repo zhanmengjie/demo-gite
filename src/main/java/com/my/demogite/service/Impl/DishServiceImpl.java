@@ -3,9 +3,10 @@ package com.my.demogite.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.my.demogite.entity.Dish;
-import com.my.demogite.entity.DishFlavor;
+import com.my.demogite.common.CustomException;
+import com.my.demogite.entity.*;
 import com.my.demogite.entity.dto.DishDto;
+import com.my.demogite.entity.dto.SetmealDto;
 import com.my.demogite.mapper.DishMapper;
 import com.my.demogite.service.DishFlavorService;
 import com.my.demogite.service.DishService;
@@ -13,6 +14,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,20 +47,39 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         dishFlavorService.saveBatch(flavors);
     }
 
+//    @Override
+//    public void deleteWithFlavor(Long[] id) {
+//        List<Long> idList = Arrays.asList(id);
+//        if (idList == null) {
+//            return;
+//        }
+//        this.removeByIds(idList);
+//       for ( int i= 0; i < idList.size(); i++ ){
+//           LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper<>();
+//           queryWrapper.eq(DishFlavor::getDishId,id);
+//           dishFlavorService.remove(queryWrapper);
+//        }
+//    }
     @Override
-    public void deleteWithFlavor(Long[] id) {
-        List<Long> idList = Arrays.asList(id);
-        if (idList == null) {
-            return;
-        }
-        this.removeByIds(idList);
-       for ( int i= 0; i < idList.size(); i++ ){
-           LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper<>();
-           queryWrapper.eq(DishFlavor::getDishId,id);
-           dishFlavorService.remove(queryWrapper);
-        }
-    }
+    public void deleteWithFlavor(@RequestParam List<Long> ids){
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(Dish::getId,ids).
+                eq(Dish::getStatus,1 );
+        int count = this.count(queryWrapper);
+        if (count > 0) {
+            throw new CustomException("菜品正在售卖中，不能删除");
 
+        }
+        //如果不能删除，直接抛出业务信息
+        //如果停售了，就可以直接删除
+        this.removeByIds(ids);
+
+//        //删除关系表中的数据
+//        LambdaQueryWrapper<DishDto> queryWrapper1 = new LambdaQueryWrapper<>();
+//        queryWrapper1.in(DishDto::getId,ids);
+//        dishFlavorService.remove(queryWrapper1);
+
+    }
     @Override
     public DishDto getByIdWithFlavor(Long id) {
         /**
