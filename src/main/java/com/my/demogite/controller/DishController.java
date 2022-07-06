@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.my.demogite.common.R;
 import com.my.demogite.entity.Category;
 import com.my.demogite.entity.Dish;
+import com.my.demogite.entity.DishFlavor;
 import com.my.demogite.entity.dto.DishDto;
 import com.my.demogite.service.CategoryService;
 import com.my.demogite.service.DishFlavorService;
@@ -136,13 +137,49 @@ public class DishController {
      * @param dish
      * @return
      */
+//    @GetMapping("/list")
+//    public R<List<Dish>> list(Dish dish){
+//        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+//        queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
+//        queryWrapper.eq(Dish::getStatus,1);
+//        queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
+//        List<Dish> list = dishService.list(queryWrapper);
+//        return R.success(list);
+//    }
     @GetMapping("/list")
-    public R<List<Dish>> list(Dish dish){
+    public R<List<DishDto>> list(Dish dish){
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
         queryWrapper.eq(Dish::getStatus,1);
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
         List<Dish> list = dishService.list(queryWrapper);
-        return R.success(list);
+        List<DishDto> dishDtoList = list.stream().map((item) -> {
+            DishDto dishDto = new DishDto();
+            //将item的数据，拷贝到给我们刚创建的dishDto对象
+            BeanUtils.copyProperties(item, dishDto);
+            //获取菜品分类的的id
+            Long categoryId = item.getCategoryId();
+            //根据菜品分类的id ，查询菜品分类的名称
+            Category category = categoryService.getById(categoryId);
+            if (category != null) {
+                //查询菜品分类的名称
+                String name1 = category.getName();
+                dishDto.setCategoryName(name1);
+            }
+            /**
+             * 菜品id
+             */
+            Long dishId = item.getId();
+            LambdaQueryWrapper<DishFlavor> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(DishFlavor::getDishId,dishId);
+
+            //口味集合
+            List<DishFlavor> list1 = dishFlavorService.list(wrapper);
+            dishDto.setFlavors(list1);
+            return dishDto;
+        }).collect(Collectors.toList());
+
+        return R.success(dishDtoList);
     }
+
 }

@@ -6,11 +6,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.my.demogite.common.R;
 import com.my.demogite.entity.Category;
 import com.my.demogite.entity.Dish;
+import com.my.demogite.entity.DishFlavor;
 import com.my.demogite.entity.Setmeal;
+import com.my.demogite.entity.dto.DishDto;
 import com.my.demogite.entity.dto.SetmealDto;
-import com.my.demogite.service.CategoryService;
-import com.my.demogite.service.SetmealDishService;
-import com.my.demogite.service.SetmealService;
+import com.my.demogite.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,11 @@ public class SetmealController {
     @Autowired
     private SetmealDishService setmealDishService;
     @Autowired
+    private DishService dishService;
+    @Autowired
     private CategoryService categoryService;
+    @Autowired
+    private DishFlavorService dishFlavorService;
 
     /**
      * 套餐分页查询
@@ -110,5 +114,15 @@ public class SetmealController {
         setmealService.updateStatus(ids,status);
         return R.success("菜品状态修改成功!!!");
     }
+    @GetMapping("/list")
+    public R<List<Setmeal>> getTaoCan(@RequestParam Long categoryId,@RequestParam int status){
+        log.info("查询的套餐的id和状态 :{}",categoryId.toString());
+        LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Setmeal::getCategoryId,categoryId).
+                     eq(Setmeal::getStatus,1 );
+        List<Setmeal> list = setmealService.list(queryWrapper);
+        return R.success(list);
+    }
+
 
 }
