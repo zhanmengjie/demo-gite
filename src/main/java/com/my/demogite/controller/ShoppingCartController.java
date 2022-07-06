@@ -91,4 +91,28 @@ public class ShoppingCartController {
         List<ShoppingCart> list = shoppingCartService.list(queryWrapper);
         return R.success(list);
     }
+    /**
+     * 删除购物车 中的一个商品
+     */
+    @PostMapping("/sub")
+    public R<String> deleteCart(@RequestBody ShoppingCart shoppingCart){
+        Long currentId = BaseContext.getCurrentId();
+        Long dishId = shoppingCart.getDishId();
+        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShoppingCart::getDishId,dishId).eq(ShoppingCart::getUserId,currentId);
+        shoppingCartService.remove(queryWrapper);
+        return R.success("删除单个购车中的信息");
+    }
+    /**
+     * 删除当前用户的全部的购物车中的信息
+     */
+    @DeleteMapping("/clean")
+    public R<String> deleteCartAll(){
+        Long currentId = BaseContext.getCurrentId();
+        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShoppingCart::getUserId,currentId);
+        shoppingCartService.remove(queryWrapper);
+        return R.success("购物车全部删除成功");
+    }
+
 }
