@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
+@SuppressWarnings("ALL")
 @RestController
 @RequestMapping("/dish")
 @Slf4j

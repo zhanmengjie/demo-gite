@@ -3,22 +3,18 @@ package com.my.demogite.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.my.demogite.common.BaseContext;
 import com.my.demogite.common.R;
-import com.my.demogite.entity.Category;
-import com.my.demogite.entity.Dish;
-import com.my.demogite.entity.DishFlavor;
 import com.my.demogite.entity.ShoppingCart;
-import com.my.demogite.entity.dto.DishDto;
 import com.my.demogite.service.CategoryService;
 import com.my.demogite.service.DishFlavorService;
 import com.my.demogite.service.DishService;
 import com.my.demogite.service.ShoppingCartService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+
 
 @SuppressWarnings("all")
 @RestController
@@ -33,61 +29,50 @@ public class ShoppingCartController {
     private DishFlavorService dishFlavorService;
     @Autowired
     private CategoryService categoryService;
-    /**
-     * 显示菜品信息
-     * @param shoppingCart
-     * @return
-     */
-//    @GetMapping("/list")
-//    public R<List<DishDto>> list(Dish dish){
-//        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
-//        queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
-//        queryWrapper.eq(Dish::getStatus,1);
-//        queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
-//        List<Dish> list = dishService.list(queryWrapper);
-//        List<DishDto> dishDtoList = list.stream().map((item) -> {
-//            DishDto dishDto = new DishDto();
-//            //将item的数据，拷贝到给我们刚创建的dishDto对象
-//            BeanUtils.copyProperties(item, dishDto);
-//            //获取菜品分类的的id
-//            Long categoryId = item.getCategoryId();
-//            //根据菜品分类的id ，查询菜品分类的名称
-//            Category category = categoryService.getById(categoryId);
-//            if (category != null) {
-//                //查询菜品分类的名称
-//                String name1 = category.getName();
-//                dishDto.setCategoryName(name1);
-//            }
-//            /**
-//             * 菜品id
-//             */
-//            Long dishId = item.getId();
-//            LambdaQueryWrapper<DishFlavor> wrapper = new LambdaQueryWrapper<>();
-//            wrapper.eq(DishFlavor::getDishId,dishId);
-//
-//            //口味集合
-//            List<DishFlavor> list1 = dishFlavorService.list(wrapper);
-//            dishDto.setFlavors(list1);
-//            return dishDto;
-//        }).collect(Collectors.toList());
-//
-//        return R.success(dishDtoList);
-//    }
-    //添加购物车，选择对应的菜品口味
     @PostMapping("/add")
-    public R<String> addShoppingCart(@RequestBody ShoppingCart shoppingCart){
+    public R<ShoppingCart> addShoppingCart(@RequestBody ShoppingCart shoppingCart){
         log.info("shoppingcart : {}",shoppingCart.toString());
         Long currentId = BaseContext.getCurrentId();
         shoppingCart.setUserId(currentId);
-        shoppingCartService.save(shoppingCart);
-        return R.success("添加购物车成功!");
+        //查询当前菜品，或者套餐是否在购物车中
+        Long dishId = shoppingCart.getDishId();
+        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShoppingCart::getUserId,currentId);
+        if (dishId != null) {
+            //添加购物车的是菜品
+            queryWrapper.eq(ShoppingCart::getDishId,dishId);
+        }else {
+            //添加购物车的是套餐
+            queryWrapper.eq(ShoppingCart::getSetmealId,shoppingCart.getSetmealId());
+        }
+        //如果以及存在则在原来数量基础上加一
+        ShoppingCart shoppingCartone = shoppingCartService.getOne(queryWrapper);
+        if (shoppingCartone != null) {
+            //如果以及存在，在原先的基础数量上加一
+            Integer number = shoppingCartone.getNumber();
+            shoppingCartone.setNumber(number + 1);
+            shoppingCartService.updateById(shoppingCartone);
+        }else {
+            shoppingCart.setNumber(1);
+            shoppingCart.setCreateTime(LocalDateTime.now());
+            shoppingCartService.save(shoppingCart);
+            shoppingCartone = shoppingCart;
+        }
+
+
+        return R.success(shoppingCartone);
     }
+    /**
+     * 显示购物车信息
+     * @param shoppingCart
+     * @return
+     */
     @GetMapping("/list")
     public R<List<ShoppingCart>> showShopCart(){
         Long currentId = BaseContext.getCurrentId();
         LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ShoppingCart::getUserId,currentId);
-        queryWrapper.orderByDesc(ShoppingCart::getCreateTime);
+        queryWrapper.orderByAsc(ShoppingCart::getCreateTime);
         List<ShoppingCart> list = shoppingCartService.list(queryWrapper);
         return R.success(list);
     }
@@ -95,13 +80,31 @@ public class ShoppingCartController {
      * 删除购物车 中的一个商品
      */
     @PostMapping("/sub")
-    public R<String> deleteCart(@RequestBody ShoppingCart shoppingCart){
+    public R<ShoppingCart> deleteCart(@RequestBody ShoppingCart shoppingCart){
         Long currentId = BaseContext.getCurrentId();
         Long dishId = shoppingCart.getDishId();
         LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ShoppingCart::getDishId,dishId).eq(ShoppingCart::getUserId,currentId);
-        shoppingCartService.remove(queryWrapper);
-        return R.success("删除单个购车中的信息");
+        queryWrapper.eq(ShoppingCart::getUserId,currentId);
+        if (dishId != null) {
+            //添加购物车的是菜品
+            queryWrapper.eq(ShoppingCart::getDishId,dishId);
+        }else {
+            //添加购物车的是套餐
+            queryWrapper.eq(ShoppingCart::getSetmealId,shoppingCart.getSetmealId());
+        }
+        ShoppingCart shoppingCartTwo = shoppingCartService.getOne(queryWrapper);
+
+        if (shoppingCartTwo != null) {
+            Integer number = shoppingCartTwo.getNumber();
+            shoppingCartTwo.setNumber(number - 1);
+            shoppingCartService.updateById(shoppingCartTwo);
+        }else {
+            shoppingCart.setNumber(0);
+            shoppingCartService.remove(queryWrapper);
+            shoppingCartTwo = shoppingCart;
+        }
+
+        return R.success(shoppingCartTwo);
     }
     /**
      * 删除当前用户的全部的购物车中的信息
